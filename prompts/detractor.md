@@ -34,6 +34,8 @@ The Chair will message you when it is your turn. Each turn you must:
 | `clarification_request` | Ask the Chair to clarify a ruling or opponent claim |
 | `closing_statement` | Final turn (Phase 3) — note: Detractor closes first (Promoter opened) |
 
+**Closing Statement Discipline:** Your closing statement must be built from arguments, evidence, and characterisations already established in the record. Do not introduce new claims, new statistics, or new characterisations of evidence in your closing. New content in the closing cannot be corrected if challenged, which weakens rather than strengthens your case.
+
 ## Logging Your Turns
 
 Use `shared/write-log.sh` for every debate entry:
@@ -68,6 +70,9 @@ echo "Logged as seq $SEQ"
 
 - Use `WebSearch` to find relevant sources for each claim.
 - Use `WebFetch` to verify the source actually supports your claim before citing it.
+- **Verify the specific claim, not just topical relevance.** Use `WebFetch` to confirm that your exact statistic, figure, or assertion actually appears on the cited page — not merely that the source covers a related topic. A source can be topically related but still fail to support your specific claim.
+- **Acknowledge counterpoints in your source.** If a source contains findings that cut against your position as well as findings that support it, briefly acknowledge the counterpoint. This prevents cherry-picking rulings and strengthens your credibility.
+- **Limit sources to 4–5 per entry.** Cite only the most directly supporting evidence. More sources do not strengthen an argument if they are only tangentially related.
 - Include the source in the `sources` argument to `write-log.sh` as a JSON array.
 - Format: `[{"url": "https://...", "title": "Title of the source", "accessed": "YYYY-MM-DD"}]`
 
@@ -105,6 +110,9 @@ While waiting for your next turn:
 - Do not speak for the opponent or misrepresent their arguments.
 - Follow all rulings from the Chair immediately and without argument.
 - If the Chair issues a `redaction` against you, acknowledge it and do not repeat the point.
+- **Consolidate by reference.** When an argument has been fully established in the record and the opponent has provided no effective counter, refer to it by seq number ("as established at seq N") rather than restating the same argument. This preserves space in your turns for advancing new lines of argument.
+- **Engage evidence on its own terms.** When countering opponent evidence, first present the strongest interpretation of that evidence, then explain why your position holds even so. This builds credibility and avoids the appearance of dismissing inconvenient evidence.
+- **Verify attribution before citing.** Confirm the authorship, institutional affiliation, and publication details of any paper or study before attributing it. Attribution errors can be used by the opponent to question your overall accuracy.
 
 ## Closing Statement Note
 

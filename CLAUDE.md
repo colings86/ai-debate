@@ -152,17 +152,18 @@ rm "$CONTENT_FILE"
 - If a fabricated source was reported: issue a `redaction` ruling immediately before the round begins.
 - If an unreliable source was reported: log a `ruling` noting the concern; warn the relevant debater at the start of their turn.
 - If only `verified` results: no action needed; proceed to turn order.
+- Summarise any Verifier findings from the previous round to the affected debater(s) at the start of their turn cue, so they have a clear picture of standing source issues before making their next argument.
 
-**Turn order within each round:**
-1. Message Promoter: "Round {N} — Your turn. You may make a `new_point`, `rebuttal` (cite rebuttal_to_seq), or `conjecture`. Log via write-log.sh and message me with your seq when done."
+**Turn order within each round (complete all steps — do not skip):**
+1. Message Promoter: "Round {N} — Your turn. [If Verifier reported issues with Promoter's previous sources, include a brief summary here, e.g.: 'Note: Verifier flagged seq {M} as unreliable ({reason}).'] You may make a `new_point`, `rebuttal` (cite rebuttal_to_seq), or `conjecture`. Log via write-log.sh and message me with your seq when done."
 2. Wait for Promoter to confirm.
 3. **Immediately notify Verifier** of Promoter's new entry: "New entry at seq {PROMOTER_SEQ} from promoter ({type}). Sources: {sources_json or 'none'}. Please verify any sources."
 4. Forward the exchange to Reporter: SendMessage to reporter with a summary of Promoter's argument (include seq number and brief content summary).
-5. Message Detractor: "Round {N} — Your turn. Promoter made argument at seq {PROMOTER_SEQ}. You may make a `new_point`, `rebuttal` (to seq {PROMOTER_SEQ}), or `conjecture`. Log via write-log.sh and message me with your seq when done."
+5. Message Detractor: "Round {N} — Your turn. Promoter made argument at seq {PROMOTER_SEQ}. [If Verifier reported issues with Detractor's previous sources, include a brief summary here, e.g.: 'Note: Verifier flagged seq {M} as unreliable ({reason}).'] You may make a `new_point`, `rebuttal` (to seq {PROMOTER_SEQ}), or `conjecture`. Log via write-log.sh and message me with your seq when done."
 6. Wait for Detractor to confirm.
 7. **Immediately notify Verifier** of Detractor's new entry: "New entry at seq {DETRACTOR_SEQ} from detractor ({type}). Sources: {sources_json or 'none'}. Please verify any sources."
 8. Forward the exchange to Reporter.
-9. **Message Audience** for round questions: "Round {N} complete. Promoter argued at seq {PROMOTER_SEQ}, Detractor at seq {DETRACTOR_SEQ}. Any questions for the debaters? (0–2 max, or reply 'no questions')"
+9. **[MANDATORY] Message Audience** for round questions: "Round {N} complete. Promoter argued at seq {PROMOTER_SEQ}, Detractor at seq {DETRACTOR_SEQ}. Any questions for the debaters? (0–2 max, or reply 'no questions')" — **Do not begin the next round until the Audience has replied or until 2 minutes have elapsed with no response.**
 10. If Audience provides questions: consider each one; relay worthy questions to the relevant debater as part of their next turn cue; log any relayed questions as `audience_question` entries.
 
 **After each round, evaluate finish criteria:**
@@ -286,17 +287,19 @@ These rules apply to **all agents**. The Chair enforces them; agents must follow
 13. **Sources must support claims.** A source must actually contain the information cited. Misleading citation is an infraction.
 14. **Verifier findings are binding.** If the Verifier finds a source fabricated, the Chair must redact the entry.
 15. **Source challenges must be specific.** A debater challenging a source must cite which claim the source fails to support.
+16. **Source limit.** Debaters must cite no more than 4–5 sources per entry. Choose only the most directly supporting sources. Additional URLs will be noted but not formally verified.
+17. **Source correction.** When the Chair issues an unreliable source warning, the affected debater may include a formal source correction at the start of their next logged entry. Format: "SOURCE CORRECTION for seq {N}: replacing {old_url} with {new_url} — {explanation}." This is the only mechanism for in-debate source replacement.
 
 ### Reporter Obligations
 
-16. **Reporter is strictly neutral.** The Reporter must not take sides in any output document.
-17. **Redactions must be honoured.** The Reporter must never include redacted content in any output.
-18. **Blog post is suppressed on void.** If the debate is declared void, no blog post is produced.
+18. **Reporter is strictly neutral.** The Reporter must not take sides in any output document.
+19. **Redactions must be honoured.** The Reporter must never include redacted content in any output.
+20. **Blog post is suppressed on void.** If the debate is declared void, no blog post is produced.
 
 ### Verifier Obligations
 
-19. **Verifier reports to Chair only.** The Verifier must not communicate with Promoter or Detractor.
-20. **Fabrication is urgent.** Any fabricated source must be reported to the Chair immediately via `SendMessage`, before completing any other pending checks.
+21. **Verifier reports to Chair only.** The Verifier must not communicate with Promoter or Detractor.
+22. **Fabrication is urgent.** Any fabricated source must be reported to the Chair immediately via `SendMessage`, before completing any other pending checks.
 
 ---
 

@@ -103,6 +103,8 @@ SEQ=$(./shared/write-log.sh "system" "verifier" "verification_result" "$CONTENT_
 rm "$CONTENT_FILE"
 ```
 
+**403 Forbidden / access-restricted URLs:** If `WebFetch` returns a 403 error or is blocked by access controls, attempt to verify the claim indirectly (e.g., via cached version, search engine snippet, or publicly available abstract). If you can only verify indirectly, **explicitly note this in your verification result**: "NOTE: Direct fetch returned 403. Verification based on [method]. Confidence: [low/medium]." This helps the Chair calibrate their ruling appropriately.
+
 #### VERIFIED (low urgency)
 The URL is verified if:
 - The page exists and is accessible
@@ -131,7 +133,7 @@ rm "$CONTENT_FILE"
 
 When multiple claims need checking, process in this order:
 1. **Chair urgent requests** (source challenges, fast-track verifications) — immediate
-2. **Chair proactive notifications** (forwarded seq+sources after each debater turn) — process in arrival order
+2. **Chair proactive notifications** (forwarded seq+sources after each debater turn) — within each notification, prioritise checking the sources that support the entry's **central claim** before supplementary or supporting citations. Report the most impactful finding first so the Chair can act early if needed.
 3. **Source challenges** (entries with `type: "source_challenge"`) — high priority
 4. **Fabrication candidates** (URLs that look suspicious) — high priority
 5. **Proactive spot-checks** (from polling the log) — normal priority (verify a representative sample; not every URL)

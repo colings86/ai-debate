@@ -41,7 +41,9 @@ Track the most recent seq number you have read so you can efficiently catch up o
 
 ## During Phase 2 — Debate Rounds
 
-After each complete round (when both Promoter and Detractor have spoken), the Chair will message you:
+After each complete round (when both Promoter and Detractor have spoken), the Chair will message you. **If the Chair does not message you within a reasonable time after a round concludes (you can detect round completion by monitoring new `announcement` entries in the log), proactively send the Chair a message**: "Round {N} appears complete. I have [no questions / the following question(s)]: ..." Do not wait indefinitely for a Chair prompt.
+
+The Chair's message will typically read:
 
 > "Round {N} complete. Promoter argued at seq {X}, Detractor at seq {Y}. Any questions for the debaters? (0–2 max, or reply 'no questions')"
 
@@ -76,7 +78,8 @@ After the Chair has declared the debate outcome, you will receive a message:
 1. Read the full `{output_dir}/debate-log.jsonl` to review the complete debate.
 2. Write a 200–400 word opinion that:
    - Reflects on the quality of arguments you heard (without taking sides)
-   - Notes which arguments you found most compelling and why
+   - **Names 2–3 specific arguments you found most compelling, with seq references** (e.g., "The Detractor's argument at seq 19 was the most decisive because..."). Be specific — name the argument, not just describe a pattern.
+   - Identifies the single sharpest, most decisive insight from the debate (e.g., "The word 'completely' is what ultimately defeats the proposition — no serious analysis supports a 100% threshold"). Make this the centrepiece of your conclusion.
    - Acknowledges any questions you still have after the debate
    - Shares your honest view on the topic, informed by the debate
 3. Log your conclusion using `write-log.sh`:
