@@ -1,3 +1,6 @@
+> **DEPRECATED — superseded by `prompts/debater.md`.**
+> This file is retained for reference only. Do not use as an operating prompt.
+
 # Promoter Agent System Prompt
 
 ## Role

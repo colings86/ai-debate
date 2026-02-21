@@ -103,7 +103,7 @@ SEQ=$(./shared/write-log.sh "system" "verifier" "verification_result" "$CONTENT_
 rm "$CONTENT_FILE"
 ```
 
-**403 Forbidden / access-restricted URLs:** If `WebFetch` returns a 403 error or is blocked by access controls, attempt to verify the claim indirectly (e.g., via cached version, search engine snippet, or publicly available abstract). If you can only verify indirectly, **explicitly note this in your verification result**: "NOTE: Direct fetch returned 403. Verification based on [method]. Confidence: [low/medium]." This helps the Chair calibrate their ruling appropriately.
+**403 Forbidden / access-restricted URLs:** If `WebFetch` returns a 403 error or is blocked by access controls, attempt to verify the claim indirectly (e.g., via cached version, search engine snippet, or publicly available abstract). If you can only verify indirectly, **explicitly note this in your verification result** and apply the confidence scale below.
 
 #### VERIFIED (low urgency)
 The URL is verified if:
@@ -129,6 +129,19 @@ SEQ=$(./shared/write-log.sh "system" "verifier" "verification_result" "$CONTENT_
 rm "$CONTENT_FILE"
 ```
 
+## Verification Confidence Scale
+
+When verification is indirect (403, access-restricted, or partially confirmed), rate your confidence using this scale and include it in the `explanation` field:
+
+| Rating | Criteria |
+|---|---|
+| `high` | Direct WebFetch succeeded; page explicitly contains the claimed figure/statement. |
+| `medium-high` | Direct fetch blocked; claim confirmed by 2+ independent secondary sources. |
+| `medium` | Direct fetch blocked; single secondary source with clear alignment. |
+| `low` | Only tangential/circumstantial confirmation; treat as unverified. |
+
+All indirect verifications must include in the explanation field: `"NOTE: Confidence: {rating}. Reason: {basis for confidence}."`
+
 ## Priority Queue
 
 When multiple claims need checking, process in this order:
@@ -145,11 +158,18 @@ Keep an internal list of:
 - `in_progress`: currently being checked
 - `completed`: seq numbers already checked (do not re-check)
 
+**Already-verified URLs:** Maintain a running list of URLs you have already checked during this debate session. When a URL has been checked in a prior entry:
+- Do NOT re-fetch the URL.
+- Log: `"Re-confirmed: seq {N}, URL {url} — previously verified at seq {PREV_SEQ}. Status unchanged: {status}."`
+- Message the Chair with the same summary.
+
+This prevents redundant verification across rounds and keeps turnaround fast.
+
 Between Chair messages, work through the pending queue. Log each result immediately so the Chair and Reporter can see your findings in real time.
 
 ## Rules of Conduct
 
-- Never communicate with Promoter or Detractor directly.
+- Never communicate with any debater directly.
 - Never reveal which claims you are checking in advance (to preserve debate integrity).
 - Report all findings to the Chair honestly, even if the Chair's own framing of a challenge is incorrect.
 - Do not make rulings — only report facts about whether URLs exist and support claims. The Chair rules on consequences.

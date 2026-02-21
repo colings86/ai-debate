@@ -1,8 +1,8 @@
 # AI Debate Experiment
 
-A structured debate between AI agents, orchestrated by Claude Code Agent Teams. Five specialised
-agents — Chair, Promoter, Detractor, Reporter, and Verifier — argue a topic, fact-check each
-other's sources in real time, and produce a publishable written record.
+A structured debate between AI agents, orchestrated by Claude Code Agent Teams. Specialised
+agents — Chair, N configurable Debaters, Reporter, Verifier, Audience, and Assessor — argue a
+topic, fact-check each other's sources in real time, and produce a publishable written record.
 
 ---
 
@@ -10,17 +10,17 @@ other's sources in real time, and produce a publishable written record.
 
 | Agent | Role |
 |---|---|
-| **Chair** | Neutral moderator. Manages turn order, issues rulings, declares the outcome. |
-| **Promoter** | Argues the **affirmative** side of the topic. |
-| **Detractor** | Argues the **negative** side of the topic. |
+| **Chair** | Neutral moderator. Manages turn order, issues rulings, declares the outcome. Proposes the debater lineup and waits for user approval before spawning agents. |
+| **Debaters** | N configurable participants, each with their own persona, starting position, and incentives — proposed by the Chair at startup and approved by the user before the debate begins. |
 | **Reporter** | Silent observer. Produces the transcript, summary, and blog post at the end. |
 | **Verifier** | Async fact-checker. Verifies every cited URL and flags fabricated sources. |
 | **Audience** | Engaged observer. Submits clarifying questions mid-debate; gives a final opinion at close. |
 | **Assessor** | Post-debate reviewer. Evaluates each agent's performance and produces an improvement report. |
 
-The Chair is the lead Claude Code session. It spawns the other six agents as teammates, then
-coordinates a structured debate through opening statements, multiple rebuttal rounds, and closing
-statements before declaring a winner.
+The Chair is the lead Claude Code session. It proposes a debater lineup based on your topic,
+waits for your approval, then spawns all agents as teammates and coordinates a structured debate
+through opening statements, multiple rebuttal rounds, and closing statements before declaring a
+winner.
 
 All debate entries are written to `{output_dir}/debate-log.jsonl` — an append-only log inside
 the run's output directory that acts as the shared source of truth for all agents.
@@ -39,6 +39,8 @@ the run's output directory that acts as the shared source of truth for all agent
 
 ### Step 1 — Adjust round settings (optional)
 
+Open `config/debate-config.json` and edit these values if desired:
+
 ```json
 {
   "min_rounds": 3,
@@ -48,6 +50,10 @@ the run's output directory that acts as the shared source of truth for all agent
 ```
 
 For a quick test run, set `"max_rounds": 1`.
+
+> **Note:** `config/debate-config.json` is a runtime state file. The Chair populates it at startup
+> with the topic, debater lineup, and output directory. You do not need to edit `topic`, `debaters`,
+> or `output_dir` manually — the Chair handles these.
 
 ### Step 2 — Start the debate
 
@@ -68,16 +74,49 @@ Or just say `Start the debate.` and the Chair will ask you for the topic.
 The Chair reads `CLAUDE.md` automatically when Claude Code starts, so it already knows its role.
 Sending "Start the debate." triggers the startup sequence:
 
-1. Ask you for (or extract) the topic
-2. Create a timestamped output directory under `output/`
-3. Initialise `{output_dir}/debate-log.jsonl`
-4. Spawn the Promoter, Detractor, Reporter, Verifier, Audience, and Assessor agents
-5. Run the debate through all phases automatically
+1. Extract (or ask for) the topic
+2. Propose a debater lineup — **wait for your approval before continuing**
+3. Create a timestamped output directory under `output/`
+4. Initialise `{output_dir}/debate-log.jsonl`
+5. Spawn all debater agents plus Reporter, Verifier, Audience, and Assessor
+6. Run the debate through all phases automatically
 
-> **Tip:** If you want to use a specific topic rather than the one in config, you can say:
-> `Start the debate. The topic is: [your topic here].`
+### Step 3 — Specifying Debaters
 
-### Step 3 — Watch the debate
+You have three ways to tell the Chair who should debate:
+
+**Option 1 — No spec (Chair decides):**
+```
+Start the debate. The topic is: X.
+```
+The Chair proposes a contextually appropriate lineup — typically 2 debaters in classic adversarial
+format, or 3 if the topic has distinct natural perspectives. You review and approve before
+the debate begins.
+
+**Option 2 — Persona hints:**
+```
+Start the debate. Topic: X. I want a venture capitalist, a labour economist, and an AI safety researcher.
+```
+The Chair fleshes out each persona with an appropriate starting position and incentives, then
+presents the lineup for your approval.
+
+**Option 3 — Specific detail:**
+```
+Start the debate. Topic: X.
+Debater 1: venture-capitalist — argues AI is net positive for employment; incentivised by growth narratives.
+Debater 2: labour-economist — argues structural unemployment is underappreciated; incentivised by worker welfare data.
+```
+The Chair uses your specifications directly, filling in any gaps you leave.
+
+**Modifying the proposed lineup:**
+After the Chair presents its proposal, you can reply "Can you make the second debater more
+sceptical, focused on data quality issues?" and the Chair will revise and re-present before
+proceeding.
+
+> **Debater name constraint:** Names must be alphanumeric plus hyphens only (e.g., `venture-capitalist`,
+> `labour-economist`). The Chair handles this automatically.
+
+### Step 4 — Watch the debate
 
 The Chair narrates progress in its main session. If you have `tmux` available, you can split each
 agent into its own pane for full visibility:
@@ -99,7 +138,7 @@ for line in sys.stdin:
 "
 ```
 
-### Step 4 — Read the output
+### Step 5 — Read the output
 
 When the debate concludes, the Reporter writes all output files to a timestamped directory under
 `output/`. For example:
@@ -118,21 +157,26 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 
 ## Configuration Reference
 
-`config/debate-config.json`:
+`config/debate-config.json` (settable fields — others are populated at runtime):
 
 | Field | Default | Description |
 |---|---|---|
 | `min_rounds` | `3` | Minimum rebuttal rounds before the Chair may end the debate. |
 | `max_rounds` | `8` | Hard cap on rebuttal rounds. |
 | `time_budget_minutes` | `30` | Soft time limit. Chair may conclude early if exceeded. |
-| `output_dir` | `""` | Set automatically at runtime — do not edit manually. |
 | `models.chair` | `claude-opus-4-6` | Model for the Chair agent. |
-| `models.promoter` | `claude-sonnet-4-6` | Model for the Promoter agent. |
-| `models.detractor` | `claude-sonnet-4-6` | Model for the Detractor agent. |
-| `models.reporter` | `claude-sonnet-4-6` | Model for the Reporter agent. |
+| `models.reporter` | `claude-sonnet-4-6` | Model for the Reporter agent (also used as the default debater model). |
 | `models.verifier` | `claude-sonnet-4-6` | Model for the Verifier agent. |
 | `models.audience` | `claude-sonnet-4-6` | Model for the Audience agent. |
 | `models.assessor` | `claude-sonnet-4-6` | Model for the Assessor agent. |
+
+**Runtime-only fields** (do not edit manually):
+
+| Field | Description |
+|---|---|
+| `topic` | Set by the Chair from your startup message. |
+| `output_dir` | Set by the Chair at startup (timestamped path under `output/`). |
+| `debaters` | Populated by the Chair after you approve the lineup. Array of `{name, persona, starting_position, incentives, model}` objects. |
 
 ---
 
@@ -141,6 +185,8 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 - All factual claims **must** cite a real, accessible URL. Fabricated URLs result in immediate
   disqualification of that argument.
 - Speculative arguments must be explicitly labelled `[CONJECTURE]`.
+- Before logging any figure or statistic, debaters must use `WebFetch` to confirm the exact value
+  appears on the cited page (numerical pre-verification).
 - The Verifier independently checks cited sources using `WebFetch` and reports any fabrications
   to the Chair urgently.
 - The Chair's rulings are final. Redacted entries are struck from the record; the Reporter
@@ -148,7 +194,7 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 - The Reporter never takes sides. The blog post is suppressed entirely if the debate is declared
   void.
 
-See `CLAUDE.md` for the complete set of 20 rules.
+See `CLAUDE.md` for the complete set of 24 rules.
 
 ---
 
@@ -159,16 +205,16 @@ ai-debate/
 ├── CLAUDE.md                   # Chair instructions + shared rules (read by ALL agents)
 ├── README.md                   # This file
 ├── config/
-│   └── debate-config.json      # Runtime configuration
+│   └── debate-config.json      # Runtime configuration (populated at startup)
 ├── prompts/
-│   ├── promoter.md             # Promoter agent system prompt
-│   ├── detractor.md            # Detractor agent system prompt
+│   ├── debater.md              # Universal debater agent system prompt
+│   ├── promoter.md             # DEPRECATED — superseded by debater.md
+│   ├── detractor.md            # DEPRECATED — superseded by debater.md
 │   ├── reporter.md             # Reporter agent system prompt
 │   ├── verifier.md             # Verifier agent system prompt
 │   ├── audience.md             # Audience agent system prompt
 │   └── assessor.md             # Assessor agent system prompt
 ├── shared/
-│   ├── debate-log.jsonl        # Append-only debate log (reset before each run)
 │   └── write-log.sh            # Atomic JSONL writer (used by all agents)
 └── output/                     # One subdirectory created per debate run
 ```

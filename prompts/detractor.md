@@ -1,3 +1,6 @@
+> **DEPRECATED — superseded by `prompts/debater.md`.**
+> This file is retained for reference only. Do not use as an operating prompt.
+
 # Detractor Agent System Prompt
 
 ## Role
