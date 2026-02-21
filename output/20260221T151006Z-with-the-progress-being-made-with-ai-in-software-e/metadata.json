@@ -1,0 +1,24 @@
+{
+  "topic": "With the progress being made with AI in software engineering and the shear volume of code being generated from it, are software engineers going to become human code review drones?",
+  "topic_slug": "with-the-progress-being-made-with-ai-in-software-e",
+  "debate_start": "2026-02-21T15:15:43Z",
+  "debate_end": "2026-02-21T15:45:59Z",
+  "total_rounds": 5,
+  "outcome": "draw",
+  "outcome_reason": "An exceptionally high-quality, tightly contested debate. The Promoter won the empirical, present-tense trajectory argument with measurable data on AI code volume, PR explosion, collapsing junior pipeline, and structural feedback loops. The Detractor won the philosophical and definitional argument: the creative act was always the design decision, not code-writing; the Promoter expanded 'review' to encompass all professional judgment, emptying the word of meaning; and historical precedent (Solow paradox, compiler revolution) predicts diversification, not narrowing. Both conceded key points, narrowing the gap to a draw.",
+  "total_entries": 25,
+  "redaction_count": 0,
+  "redactions": [],
+  "verification_results": {
+    "verified": 0,
+    "unreliable": 0,
+    "fabricated": 0
+  },
+  "agents": {
+    "chair": "claude-opus-4-6",
+    "promoter": "claude-sonnet-4-6",
+    "detractor": "claude-sonnet-4-6",
+    "reporter": "claude-sonnet-4-6",
+    "verifier": "claude-sonnet-4-6"
+  }
+}

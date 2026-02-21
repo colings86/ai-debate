@@ -1,0 +1,8 @@
+# Original planning document
+*.pdf
+
+# macOS
+.DS_Store
+
+# Claude Code session data
+.claude/

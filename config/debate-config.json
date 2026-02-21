@@ -1,0 +1,17 @@
+{
+  "topic": "",
+  "topic_prompt": "Should artificial intelligence be used to make judicial sentencing decisions?",
+  "min_rounds": 1,
+  "max_rounds": 10,
+  "time_budget_minutes": 60,
+  "output_dir": "",
+  "models": {
+    "chair": "claude-opus-4-6",
+    "promoter": "claude-sonnet-4-6",
+    "detractor": "claude-sonnet-4-6",
+    "reporter": "claude-sonnet-4-6",
+    "verifier": "claude-sonnet-4-6",
+    "audience": "claude-sonnet-4-6",
+    "assessor": "claude-sonnet-4-6"
+  }
+}
