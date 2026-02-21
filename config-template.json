@@ -1,10 +1,7 @@
 {
-  "topic": "",
   "min_rounds": 3,
   "max_rounds": 8,
   "time_budget_minutes": 30,
-  "output_dir": "",
-  "debaters": [],
   "models": {
     "chair": "claude-opus-4-6",
     "reporter": "claude-sonnet-4-6",

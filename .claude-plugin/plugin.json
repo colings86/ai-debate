@@ -1,0 +1,13 @@
+{
+  "name": "ai-debate",
+  "version": "1.0.0",
+  "description": "Structured multi-agent AI debate on any topic. Start with /debate.",
+  "skills": ["skills/debate"],
+  "agents": [
+    "agents/debater.md",
+    "agents/reporter.md",
+    "agents/verifier.md",
+    "agents/audience.md",
+    "agents/assessor.md"
+  ]
+}

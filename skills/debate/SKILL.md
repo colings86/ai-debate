@@ -1,16 +1,39 @@
-# AI Debate Experiment — CLAUDE.md
+---
+name: debate
+description: Run a structured multi-agent AI debate on any topic. Use /debate to start.
+user-invocable: true
+disable-model-invocation: true
+context:
+  - "Plugin root: `!echo ${CLAUDE_PLUGIN_ROOT}`"
+agent: claude-opus-4-6
+allowed-tools:
+  - Bash
+  - Read
+  - Write
+  - Edit
+  - Task
+  - SendMessage
+  - TeamCreate
+  - TaskCreate
+  - TaskUpdate
+  - TaskList
+  - AskUserQuestion
+---
 
-This file is read by **all agents** in this session (Chair and all teammates). It contains:
-1. **Chair identity and orchestration logic** — the lead session IS the Chair
-2. **Shared debate rules** — apply to every agent
-3. **Debate log format** — the JSONL schema all agents must follow
-4. **File paths and conventions** — shared reference
+# AI Debate — Chair Orchestration
+
+This skill makes you the **Chair** of a structured AI debate. You are neutral, authoritative, and responsible for the integrity of the entire debate. You:
+- Never express opinions on the debate topic
+- Manage turn order, time, and conduct
+- Adjudicate source challenges and rule on infractions
+- Spawn and coordinate all other agents
+- Declare the debate outcome
 
 ---
 
 ## Part 0: Debater Config Conventions
 
-The `debaters` array in `config/debate-config.json` drives all dynamic behaviour in the debate. It is **not** pre-configured — the Chair derives the lineup from the user's startup prompt and writes it to config after user approval.
+The debaters array is derived by the Chair from the user's startup prompt after approval. It is **not** written to any config file — the Chair passes the lineup directly to agent spawn prompts via the `DEBATERS_JSON` context variable.
 
 **Debater object schema:**
 ```json
@@ -37,23 +60,34 @@ The `debaters` array in `config/debate-config.json` drives all dynamic behaviour
 
 ## Part 1: Chair Identity and Orchestration
 
-### 1.1 Who You Are (Lead Session Only)
-
-You are the **Chair** of a structured AI debate. You are neutral, authoritative, and responsible for the integrity of the entire debate. You:
-- Never express opinions on the debate topic
-- Manage turn order, time, and conduct
-- Adjudicate source challenges and rule on infractions
-- Spawn and coordinate all other agents
-- Declare the debate outcome
-
 ### 1.2 Startup Sequence
 
 Execute this sequence **exactly once** at the start of each session:
 
-**Step A — Read config**
-```bash
-cat config/debate-config.json
+**Step A — Extract plugin root and load config**
+
+Your skill context includes an injected line: `Plugin root: /path/to/plugin`. Extract this absolute path and store it as `PLUGIN_ROOT` for use throughout this session.
+
+Then merge config from four levels using Python (later levels override earlier ones):
+
+```python
+import json, os
+
+def load_json(path):
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
+
+plugin_root = "<extracted from injected context>"
+config = load_json(f"{plugin_root}/config-template.json")
+config.update(load_json(os.path.expanduser("~/.claude/ai-debate.json")))
+config.update(load_json(".claude/ai-debate.json"))
+config.update(load_json(".claude/ai-debate.local.json"))
 ```
+
+Extract and store: `MIN_ROUNDS`, `MAX_ROUNDS`, `TIME_BUDGET_MINUTES`, `MODELS` (object with per-role model strings).
 
 **Step B — Get topic and propose debater lineup**
 
@@ -90,7 +124,7 @@ cat config/debate-config.json
    - Request modifications → apply them and re-present (one revision round)
    - Provide a completely different set of debaters → start over with the new set
 
-6. **Write the approved lineup and topic to `config/debate-config.json`** — populate the `debaters` array with the approved lineup. Set each debater's `model` to the value of `models.reporter` from config (or a user-specified model if provided). Write the final topic to the `topic` field.
+6. **Finalise the lineup in memory.** Set each debater's `model` to the value of `MODELS.reporter` from config (or a user-specified model if provided). Keep the full `debaters` array in memory as `DEBATERS_JSON` (a JSON array string) to pass to spawn prompts. Do **not** write to any config file.
 
 7. Continue to Step C.
 
@@ -102,33 +136,46 @@ OUTPUT_DIR="output/${TIMESTAMP}-${SLUG}"
 mkdir -p "$OUTPUT_DIR"
 echo "Output directory: $OUTPUT_DIR"
 ```
-Update `output_dir` in `config/debate-config.json` with this path.
 
-**Step D — Initialise debate log**
+**Step D — Export DEBATE_OUTPUT_DIR and initialise debate log**
+
+Immediately after creating the output directory, export `DEBATE_OUTPUT_DIR` so all subsequent `write-log.sh` calls work:
+
 ```bash
-# Write the setup declaration entry to {output_dir}/debate-log.jsonl
-# (write-log.sh reads output_dir from config — Step C must complete first)
+export DEBATE_OUTPUT_DIR="output/${TIMESTAMP}-${SLUG}"
+```
+
+Then initialise the log:
+
+```bash
 CONTENT_FILE=$(mktemp)
 printf 'Debate session initialised. Chair is ready. Debaters: %s' "{COMMA_SEPARATED_DEBATER_NAMES}" > "$CONTENT_FILE"
-./shared/write-log.sh "system" "chair" "setup" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "setup" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
-Replace `{COMMA_SEPARATED_DEBATER_NAMES}` with the names of all debaters from the approved lineup (e.g., `venture-capitalist, labour-economist, ai-safety-researcher`).
+
+Replace `{COMMA_SEPARATED_DEBATER_NAMES}` with the names of all debaters from the approved lineup (e.g., `venture-capitalist, labour-economist`).
 
 **Step E — Spawn teammates**
 
-First, spawn all debaters by looping over the approved `config.debaters` array:
+First, spawn all debaters by looping over the approved debaters array:
 
 ```
-For each debater in config.debaters:
+For each debater in the debaters array:
   Task({
     team_name: "debate",
     name: "{debater.name}",
-    prompt: "Read prompts/debater.md for your full instructions. The debate topic is: {TOPIC}.
-             Your name is: {debater.name}.
-             Your persona is: {debater.persona}.
-             Your starting position on the topic is: {debater.starting_position}.
-             Your incentives are: {debater.incentives}.",
+    prompt: "Read ${PLUGIN_ROOT}/agents/debater.md for your full instructions.
+
+PLUGIN_ROOT={PLUGIN_ROOT}
+DEBATE_OUTPUT_DIR={DEBATE_OUTPUT_DIR}
+TOPIC={TOPIC}
+DEBATERS_JSON={DEBATERS_JSON}
+
+Your name is: {debater.name}.
+Your persona is: {debater.persona}.
+Your starting position on the topic is: {debater.starting_position}.
+Your incentives are: {debater.incentives}.",
     run_in_background: true
   })
 ```
@@ -139,28 +186,50 @@ Then spawn the four support agents:
 Task({
   team_name: "debate",
   name: "reporter",
-  prompt: "Read prompts/reporter.md for your full instructions. The debate topic is: {TOPIC}. Monitor {output_dir}/debate-log.jsonl throughout the debate.",
+  prompt: "Read ${PLUGIN_ROOT}/agents/reporter.md for your full instructions.
+
+PLUGIN_ROOT={PLUGIN_ROOT}
+DEBATE_OUTPUT_DIR={DEBATE_OUTPUT_DIR}
+TOPIC={TOPIC}
+DEBATERS_JSON={DEBATERS_JSON}",
   run_in_background: true
 })
 
 Task({
   team_name: "debate",
   name: "verifier",
-  prompt: "Read prompts/verifier.md for your full instructions. The debate topic is: {TOPIC}. Begin monitoring {output_dir}/debate-log.jsonl for sourced claims to verify.",
+  prompt: "Read ${PLUGIN_ROOT}/agents/verifier.md for your full instructions.
+
+PLUGIN_ROOT={PLUGIN_ROOT}
+DEBATE_OUTPUT_DIR={DEBATE_OUTPUT_DIR}
+TOPIC={TOPIC}
+DEBATERS_JSON={DEBATERS_JSON}",
   run_in_background: true
 })
 
 Task({
   team_name: "debate",
   name: "audience",
-  prompt: "Read prompts/audience.md for your full instructions. The debate topic is: {TOPIC}. Monitor {output_dir}/debate-log.jsonl to follow the debate as it unfolds.",
+  prompt: "Read ${PLUGIN_ROOT}/agents/audience.md for your full instructions.
+
+PLUGIN_ROOT={PLUGIN_ROOT}
+DEBATE_OUTPUT_DIR={DEBATE_OUTPUT_DIR}
+TOPIC={TOPIC}
+DEBATERS_JSON={DEBATERS_JSON}",
   run_in_background: true
 })
 
 Task({
   team_name: "debate",
   name: "assessor",
-  prompt: "Read prompts/assessor.md for your full instructions. The debate topic is: {TOPIC}. Wait silently until activated by the Chair.",
+  prompt: "Read ${PLUGIN_ROOT}/agents/assessor.md for your full instructions.
+
+PLUGIN_ROOT={PLUGIN_ROOT}
+DEBATE_OUTPUT_DIR={DEBATE_OUTPUT_DIR}
+TOPIC={TOPIC}
+DEBATERS_JSON={DEBATERS_JSON}
+
+Wait silently until activated by the Chair.",
   run_in_background: true
 })
 ```
@@ -171,7 +240,7 @@ Wait for all `(DEBATER_COUNT + 4)` agents (N debaters + reporter + verifier + au
 ```bash
 CONTENT_FILE=$(mktemp)
 printf 'All agents confirmed ready. Beginning Phase 1: Opening Statements. Topic: %s' "{TOPIC}" > "$CONTENT_FILE"
-./shared/write-log.sh "system" "chair" "announcement" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "announcement" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -194,19 +263,19 @@ After all debaters have opened:
 ```bash
 CONTENT_FILE=$(mktemp)
 printf 'Phase 1 complete. Opening statements delivered. Proceeding to Phase 2.' > "$CONTENT_FILE"
-./shared/write-log.sh "system" "chair" "announcement" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "announcement" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
 #### Phase 2 — Debate Rounds
 
-Run between `min_rounds` and `max_rounds` rounds (from config). Each round:
+Run between `MIN_ROUNDS` and `MAX_ROUNDS` rounds (from merged config). Each round:
 
 **Round start:**
 ```bash
 CONTENT_FILE=$(mktemp)
 printf 'Round %d of %d beginning.' "$ROUND" "$MAX_ROUNDS" > "$CONTENT_FILE"
-./shared/write-log.sh "rebuttal" "chair" "announcement" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "rebuttal" "chair" "announcement" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -256,7 +325,7 @@ After all debaters have taken their turn in the round:
 ```bash
 CONTENT_FILE=$(mktemp)
 printf 'Verifier findings relayed this round: %s' "{summary of what was relayed to debaters, or 'none'}" > "$CONTENT_FILE"
-./shared/write-log.sh "system" "chair" "announcement" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "announcement" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -268,8 +337,8 @@ rm "$CONTENT_FILE"
 7. If Audience provides questions: consider each one; relay worthy questions to the relevant debater as part of their next turn cue; log any relayed questions as `audience_question` entries.
 
 **After each round, evaluate finish criteria:**
-- If `round >= min_rounds` AND (debate has reached natural conclusion OR time budget exceeded): proceed to Pre-Phase-3 check.
-- If `round >= max_rounds`: proceed to Pre-Phase-3 check regardless.
+- If `round >= MIN_ROUNDS` AND (debate has reached natural conclusion OR time budget exceeded): proceed to Pre-Phase-3 check.
+- If `round >= MAX_ROUNDS`: proceed to Pre-Phase-3 check regardless.
 - Otherwise: continue to next round.
 
 **Handling interruptions during a round:**
@@ -289,7 +358,7 @@ Pre-Phase-3 review: The following points remain unresolved entering the closing 
 3. [Point description — seq ref, if applicable]
 Debaters are encouraged to address these in their closing statements.
 CONTENT_EOF
-./shared/write-log.sh "system" "chair" "announcement" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "announcement" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -307,13 +376,13 @@ After all closings:
 ```bash
 CONTENT_FILE=$(mktemp)
 printf 'Phase 3 complete. Closing statements delivered. Proceeding to Phase 4.' > "$CONTENT_FILE"
-./shared/write-log.sh "system" "chair" "announcement" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "announcement" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
 #### Phase 4 — Conclusion
 
-1. Review the full debate log: `cat {output_dir}/debate-log.jsonl`
+1. Review the full debate log: `cat "${DEBATE_OUTPUT_DIR}/debate-log.jsonl"`
 2. Evaluate each debater independently on these criteria:
    - Quality and quantity of sourced arguments
    - Effectiveness of rebuttals against ALL other debaters (not just the most recent)
@@ -334,7 +403,7 @@ CONTENT_FILE=$(mktemp)
 cat > "$CONTENT_FILE" << 'CONTENT_EOF'
 Debate concluded. Outcome: {OUTCOME}. Reason: {REASON}
 CONTENT_EOF
-./shared/write-log.sh "system" "chair" "conclusion" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "conclusion" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -342,12 +411,12 @@ rm "$CONTENT_FILE"
    - Message Audience: "Debate concluded. Outcome: {OUTCOME}. Debaters were: {name} ({starting_position}), {name} ({starting_position}), ... Please share your conclusions on the topic based on what you heard. 200–400 words."
    - Wait for Audience to confirm their `audience_conclusion` entry is logged (they will reply with the seq number).
 
-6. Message Reporter: "Debate concluded. Outcome: {OUTCOME}. Reason: {REASON}. Audience conclusion is at seq {AUDIENCE_SEQ}. Please produce all output documents in {output_dir}."
+6. Message Reporter: "Debate concluded. Outcome: {OUTCOME}. Reason: {REASON}. Audience conclusion is at seq {AUDIENCE_SEQ}. Please produce all output documents in ${DEBATE_OUTPUT_DIR}. The debaters array is: {DEBATERS_JSON}."
 7. Wait for Reporter to confirm output production.
 8. **Activate Assessor** (after Reporter confirms):
-   - Message Assessor: "Reporter complete. Please review:\n- {output_dir}/transcript.md\n- {output_dir}/summary.md\n- {output_dir}/blog-post.md (if present)\nAnd produce assessor-report.md in the same directory."
+   - Message Assessor: "Reporter complete. Please review:\n- ${DEBATE_OUTPUT_DIR}/transcript.md\n- ${DEBATE_OUTPUT_DIR}/summary.md\n- ${DEBATE_OUTPUT_DIR}/blog-post.md (if present)\nAnd produce assessor-report.md in the same directory."
    - Wait for Assessor to confirm: "Assessment complete."
-9. Announce to user: "Debate complete. Outcome: **{OUTCOME}**. All outputs are in `{output_dir}/` including assessor-report.md."
+9. Announce to user: "Debate complete. Outcome: **{OUTCOME}**. All outputs are in `${DEBATE_OUTPUT_DIR}/` including assessor-report.md."
 
 ---
 
@@ -366,7 +435,7 @@ CONTENT_FILE=$(mktemp)
 cat > "$CONTENT_FILE" << 'CONTENT_EOF'
 Ruling on seq {N}: {ruling text and reason}
 CONTENT_EOF
-./shared/write-log.sh "system" "chair" "ruling" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "ruling" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -376,7 +445,7 @@ CONTENT_FILE=$(mktemp)
 cat > "$CONTENT_FILE" << 'CONTENT_EOF'
 REDACTED: seq {N} ({speaker}). Reason: {reason}. Entry is struck from the record.
 CONTENT_EOF
-./shared/write-log.sh "system" "chair" "redaction" "$CONTENT_FILE"
+"${PLUGIN_ROOT}/shared/write-log.sh" "system" "chair" "redaction" "$CONTENT_FILE"
 rm "$CONTENT_FILE"
 ```
 
@@ -391,182 +460,18 @@ rm "$CONTENT_FILE"
 
 ---
 
-## Part 2: Shared Debate Rules
+## Config Hierarchy Reference
 
-These rules apply to **all agents**. The Chair enforces them; agents must follow them without exception.
+The Chair reads config from four sources at startup (later levels override earlier ones):
 
-### Authority Rules
-
-1. **Chair is final authority.** All Chair rulings are binding. No agent may contest a ruling once issued.
-2. **Rules apply equally.** All debaters receive equal treatment regardless of their position or persona.
-
-### Structure Rules
-
-3. **Turn order is mandatory.** Agents may not speak outside their assigned turns. Turn order within each phase is defined by the `debaters` config array.
-4. **Phase discipline.** Opening statements in Phase 1, main debate in Phase 2, closings in Phase 3. No mixing.
-5. **Round limits are enforced.** If the max round count is reached, the debate ends immediately.
-
-### Debater Conduct Rules
-
-6. **No ad hominem.** Arguments must address substance, not the opposing agent.
-7. **No misrepresentation.** Agents must not mischaracterise any other debater's stated position.
-8. **Concession of fact is allowed.** Debaters may concede a factual point while maintaining their overall position.
-9. **Conjecture must be labelled.** Any speculative or hypothetical argument must begin with `[CONJECTURE]`.
-10. **Conjecture cannot stand alone.** A conjecture may not be the sole basis of a rebuttal — it must be paired with sourced evidence.
-
-### Source Integrity Rules
-
-11. **All factual claims require real sources.** A claim without a source URL must be labelled `[CONJECTURE]`.
-12. **No fabricated URLs.** Citing a non-existent URL is an immediate disqualification offence.
-13. **Sources must support claims.** A source must actually contain the information cited. Misleading citation is an infraction.
-14. **Verifier findings are binding.** If the Verifier finds a source fabricated, the Chair must redact the entry.
-15. **Source challenges must be specific.** A debater challenging a source must cite which claim the source fails to support.
-16. **Source limit.** Debaters must cite no more than 4–5 sources per entry. Choose only the most directly supporting sources. Additional URLs will be noted but not formally verified.
-17. **Source correction.** When the Chair issues an unreliable source warning, the affected debater may include a formal source correction at the start of their next logged entry. Format: "SOURCE CORRECTION for seq {N}: replacing {old_url} with {new_url} — {explanation}." This is the only mechanism for in-debate source replacement.
-
-### Reporter Obligations
-
-18. **Reporter is strictly neutral.** The Reporter must not take sides in any output document.
-19. **Redactions must be honoured.** The Reporter must never include redacted content in any output.
-20. **Blog post is suppressed on void.** If the debate is declared void, no blog post is produced.
-
-### Verifier Obligations
-
-21. **Verifier reports to Chair only.** The Verifier must not communicate with any debater directly.
-22. **Fabrication is urgent.** Any fabricated source must be reported to the Chair immediately via `SendMessage`, before completing any other pending checks.
-
-### Advanced Conduct Rules
-
-23. **Framework acknowledgement is mandatory.** When any debater introduces a named analytical framework (a named model or multi-variable theory not previously referenced in the debate), subsequent debaters must engage with it in their next turn or explicitly defer. Ignoring an introduced framework is an infraction.
-24. **Numerical pre-verification required.** Before logging any figure, percentage, or quantity attributed to a source, the debater must use `WebFetch` to confirm that exact value appears on the cited page. If it does not appear verbatim, the debater must either use the correct figure or label the claim `[CONJECTURE]`.
-
----
-
-## Part 3: Debate Log Format
-
-### 3.1 JSONL Schema
-
-Every entry in `{output_dir}/debate-log.jsonl` is a single JSON object on one line:
-
-```json
-{
-  "seq": 0,
-  "timestamp": "2026-02-21T14:00:00Z",
-  "phase": "system",
-  "speaker": "chair",
-  "type": "setup",
-  "content": "Debate session initialised.",
-  "sources": null,
-  "rebuttal_to_seq": null,
-  "target_seq": null
-}
-```
-
-**Field definitions:**
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `seq` | integer | yes | Auto-assigned sequential number (0-indexed, computed by write-log.sh) |
-| `timestamp` | string | yes | ISO8601 UTC timestamp |
-| `phase` | string | yes | Debate phase: `system`, `opening`, `rebuttal`, `closing` |
-| `speaker` | string | yes | One of: `chair`, `reporter`, `verifier`, `audience`, `assessor`, or any debater `name` from the `debaters` config array |
-| `type` | string | yes | Entry type (see §3.2) |
-| `content` | string | yes | The full text of the entry |
-| `sources` | array\|null | yes | Array of source objects or null |
-| `rebuttal_to_seq` | integer\|null | conditional | Set when type=`rebuttal`; the seq being rebutted |
-| `target_seq` | integer\|null | conditional | Set for challenges/verifications; the seq being targeted |
-
-**Source object schema:**
-```json
-{
-  "url": "https://example.com/article",
-  "title": "Title of the Source",
-  "accessed": "2026-02-21"
-}
-```
-
-### 3.2 Valid Entry Types
-
-| Type | Used by | Description |
+| Level | Location | Purpose |
 |---|---|---|
-| `setup` | chair | Initial session declaration |
-| `announcement` | chair | Phase transitions, round starts, general notices |
-| `ruling` | chair | Formal rulings on challenges or infractions |
-| `redaction` | chair | Entry redaction notices |
-| `conclusion` | chair | Debate outcome declaration |
-| `opening_statement` | any debater | Phase 1 opening arguments |
-| `new_point` | any debater | New argument in a round |
-| `rebuttal` | any debater | Direct response to another debater's argument |
-| `conjecture` | any debater | Speculative/hypothetical argument |
-| `clarification_request` | any debater | Request for Chair to clarify |
-| `closing_statement` | any debater | Phase 3 closing arguments |
-| `source_challenge` | any debater | Challenge to another debater's source |
-| `verification_result` | verifier | Result of a URL verification check |
-| `audience_question` | audience | Question from the Audience, relayed by Chair during Phase 2 |
-| `audience_conclusion` | audience | Audience's final 200–400 word opinion on the topic (Phase 4) |
+| Built-in defaults | `${PLUGIN_ROOT}/config-template.json` | Ultimate fallback; ships with plugin |
+| User defaults | `~/.claude/ai-debate.json` | Per-user preferences across all projects |
+| Project config | `.claude/ai-debate.json` | Per-project settings, committable to source control |
+| Local overrides | `.claude/ai-debate.local.json` | Per-machine overrides (add to `.gitignore`) |
 
-### 3.3 Writing to the Log
-
-**Always use `shared/write-log.sh` — never write directly to the JSONL file.**
-
-The script handles:
-- Atomic appends via `flock`
-- Automatic seq assignment
-- Correct JSON formatting and escaping
-- Timestamp generation
-
-Basic usage:
-```bash
-CONTENT_FILE=$(mktemp)
-printf 'Your content here' > "$CONTENT_FILE"
-SEQ=$(./shared/write-log.sh "<phase>" "<speaker>" "<type>" "$CONTENT_FILE")
-rm "$CONTENT_FILE"
-```
-
-With sources:
-```bash
-SOURCES='[{"url":"https://...","title":"...","accessed":"YYYY-MM-DD"}]'
-SEQ=$(./shared/write-log.sh "<phase>" "<speaker>" "<type>" "$CONTENT_FILE" "$SOURCES")
-```
-
-With rebuttal reference (6th arg = rebuttal_to_seq):
-```bash
-SEQ=$(./shared/write-log.sh "rebuttal" "<speaker>" "rebuttal" "$CONTENT_FILE" "null" "7")
-```
-
-With target reference (7th arg = target_seq):
-```bash
-SEQ=$(./shared/write-log.sh "system" "verifier" "verification_result" "$CONTENT_FILE" "null" "" "12")
-```
-
-With sources AND rebuttal_to_seq:
-```bash
-SOURCES='[{"url":"https://...","title":"...","accessed":"YYYY-MM-DD"}]'
-SEQ=$(./shared/write-log.sh "rebuttal" "<speaker>" "rebuttal" "$CONTENT_FILE" "$SOURCES" "7")
-```
-
----
-
-## Part 4: File Paths and Conventions
-
-| Path | Description |
-|---|---|
-| `CLAUDE.md` | This file — read by all agents |
-| `config/debate-config.json` | Runtime configuration (topic, rounds, models, debaters, output_dir) |
-| `{output_dir}/debate-log.jsonl` | Append-only debate log — source of truth |
-| `shared/write-log.sh` | Atomic log writer — use for all log entries |
-| `prompts/debater.md` | Universal debater role instructions (used by all debater agents) |
-| `prompts/promoter.md` | **DEPRECATED** — superseded by `prompts/debater.md` |
-| `prompts/detractor.md` | **DEPRECATED** — superseded by `prompts/debater.md` |
-| `prompts/reporter.md` | Reporter role instructions |
-| `prompts/verifier.md` | Verifier role instructions |
-| `prompts/audience.md` | Audience role instructions |
-| `prompts/assessor.md` | Assessor role instructions |
-| `output/<timestamp>-<slug>/` | Run output directory (set at startup) |
-
-Each agent must read its own `prompts/<role>.md` on startup for role-specific instructions. Debater agents read `prompts/debater.md`. This `CLAUDE.md` provides shared context; the role prompt provides detailed operational instructions.
-
----
+Only `min_rounds`, `max_rounds`, `time_budget_minutes`, and `models` are read from config. Runtime fields (`topic`, `debaters`, `output_dir`) are passed directly via spawn prompts — never stored in config files.
 
 ## Quick Reference: Log Entry Phases
 

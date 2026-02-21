@@ -1,8 +1,11 @@
-# AI Debate Experiment
+# AI Debate — Claude Code Plugin
 
-A structured debate between AI agents, orchestrated by Claude Code Agent Teams. Specialised
-agents — Chair, N configurable Debaters, Reporter, Verifier, Audience, and Assessor — argue a
-topic, fact-check each other's sources in real time, and produce a publishable written record.
+A structured debate between AI agents, packaged as a Claude Code plugin. Install once, then use
+`/debate` from any directory to run a fully orchestrated debate on any topic.
+
+Specialised agents — Chair, N configurable Debaters, Reporter, Verifier, Audience, and Assessor —
+argue a topic, fact-check each other's sources in real time, and produce a publishable written
+record.
 
 ---
 
@@ -35,59 +38,56 @@ the run's output directory that acts as the shared source of truth for all agent
 
 ---
 
-## Running a Debate
+## Installation
 
-### Step 1 — Adjust round settings (optional)
-
-Open `config/debate-config.json` and edit these values if desired:
-
-```json
-{
-  "min_rounds": 3,
-  "max_rounds": 8,
-  "time_budget_minutes": 30
-}
-```
-
-For a quick test run, set `"max_rounds": 1`.
-
-> **Note:** `config/debate-config.json` is a runtime state file. The Chair populates it at startup
-> with the topic, debater lineup, and output directory. You do not need to edit `topic`, `debaters`,
-> or `output_dir` manually — the Chair handles these.
-
-### Step 2 — Start the debate
-
-From the project directory, launch Claude Code with Agent Teams enabled:
+Install the plugin from the local repo path:
 
 ```bash
-CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --dangerously-skip-permissions
+claude plugin install /path/to/ai-debate
 ```
 
-Once the Claude Code prompt appears, **start the debate by stating your topic**:
+Or install directly from GitHub:
+
+```bash
+claude plugin install https://github.com/colings86/ai-debate
+```
+
+After installation, the `/debate` skill is available in any Claude Code session.
+
+---
+
+## Quick Start
+
+In any Claude Code session (no need to `cd` into the repo):
+
+```bash
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude
+```
+
+Then type:
 
 ```
-Start the debate. The topic is: Should artificial intelligence be used to make judicial decisions?
+/debate
 ```
 
-Or just say `Start the debate.` and the Chair will ask you for the topic.
+The Chair will ask for your topic if you haven't provided one, propose a debater lineup, and wait
+for your approval before starting.
 
-The Chair reads `CLAUDE.md` automatically when Claude Code starts, so it already knows its role.
-Sending "Start the debate." triggers the startup sequence:
+Or provide a topic immediately:
 
-1. Extract (or ask for) the topic
-2. Propose a debater lineup — **wait for your approval before continuing**
-3. Create a timestamped output directory under `output/`
-4. Initialise `{output_dir}/debate-log.jsonl`
-5. Spawn all debater agents plus Reporter, Verifier, Audience, and Assessor
-6. Run the debate through all phases automatically
+```
+/debate The topic is: Should artificial intelligence be used to make judicial decisions?
+```
 
-### Step 3 — Specifying Debaters
+---
+
+## Specifying Debaters
 
 You have three ways to tell the Chair who should debate:
 
 **Option 1 — No spec (Chair decides):**
 ```
-Start the debate. The topic is: X.
+/debate The topic is: X.
 ```
 The Chair proposes a contextually appropriate lineup — typically 2 debaters in classic adversarial
 format, or 3 if the topic has distinct natural perspectives. You review and approve before
@@ -95,14 +95,14 @@ the debate begins.
 
 **Option 2 — Persona hints:**
 ```
-Start the debate. Topic: X. I want a venture capitalist, a labour economist, and an AI safety researcher.
+/debate Topic: X. I want a venture capitalist, a labour economist, and an AI safety researcher.
 ```
 The Chair fleshes out each persona with an appropriate starting position and incentives, then
 presents the lineup for your approval.
 
 **Option 3 — Specific detail:**
 ```
-Start the debate. Topic: X.
+/debate Topic: X.
 Debater 1: venture-capitalist — argues AI is net positive for employment; incentivised by growth narratives.
 Debater 2: labour-economist — argues structural unemployment is underappreciated; incentivised by worker welfare data.
 ```
@@ -116,7 +116,9 @@ proceeding.
 > **Debater name constraint:** Names must be alphanumeric plus hyphens only (e.g., `venture-capitalist`,
 > `labour-economist`). The Chair handles this automatically.
 
-### Step 4 — Watch the debate
+---
+
+## Watching the Debate
 
 The Chair narrates progress in its main session. If you have `tmux` available, you can split each
 agent into its own pane for full visibility:
@@ -124,7 +126,7 @@ agent into its own pane for full visibility:
 ```bash
 tmux new-session -s debate
 export CLAUDE_CODE_SPAWN_BACKEND=tmux
-CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --dangerously-skip-permissions
+CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude
 ```
 
 You can also tail the debate log in another terminal (substitute your run's output directory):
@@ -138,10 +140,12 @@ for line in sys.stdin:
 "
 ```
 
-### Step 5 — Read the output
+---
+
+## Reading the Output
 
 When the debate concludes, the Reporter writes all output files to a timestamped directory under
-`output/`. For example:
+`output/` in your **current working directory**. For example:
 
 ```
 output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
@@ -155,9 +159,18 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 
 ---
 
-## Configuration Reference
+## Configuration
 
-`config/debate-config.json` (settable fields — others are populated at runtime):
+Debate settings can be customised at three levels. Later levels override earlier ones:
+
+| Level | Location | Use case |
+|---|---|---|
+| Built-in defaults | `${PLUGIN_ROOT}/config-template.json` | Plugin defaults — not edited by users |
+| User defaults | `~/.claude/ai-debate.json` | Your personal preferences across all projects |
+| Project config | `.claude/ai-debate.json` | Per-project settings (commit this to source control) |
+| Local overrides | `.claude/ai-debate.local.json` | Per-machine overrides (add to `.gitignore`) |
+
+**Configurable fields:**
 
 | Field | Default | Description |
 |---|---|---|
@@ -170,13 +183,29 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 | `models.audience` | `claude-sonnet-4-6` | Model for the Audience agent. |
 | `models.assessor` | `claude-sonnet-4-6` | Model for the Assessor agent. |
 
-**Runtime-only fields** (do not edit manually):
+**Example — minimal project config** (`.claude/ai-debate.json`):
 
-| Field | Description |
-|---|---|
-| `topic` | Set by the Chair from your startup message. |
-| `output_dir` | Set by the Chair at startup (timestamped path under `output/`). |
-| `debaters` | Populated by the Chair after you approve the lineup. Array of `{name, persona, starting_position, incentives, model}` objects. |
+```json
+{
+  "max_rounds": 2
+}
+```
+
+**Example — user defaults** (`~/.claude/ai-debate.json`):
+
+```json
+{
+  "min_rounds": 2,
+  "max_rounds": 5,
+  "time_budget_minutes": 20
+}
+```
+
+> **Note:** `.claude/ai-debate.local.json` should be added to `.gitignore` since it contains
+> per-machine overrides that shouldn't be shared.
+
+**Runtime fields** (`topic`, `output_dir`, `debaters`) are never stored in config files —
+the Chair derives them from your startup message and passes them directly to agents at runtime.
 
 ---
 
@@ -194,7 +223,7 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 - The Reporter never takes sides. The blog post is suppressed entirely if the debate is declared
   void.
 
-See `CLAUDE.md` for the complete set of 24 rules.
+See `agents/debater.md` for the complete set of 24 rules.
 
 ---
 
@@ -202,21 +231,21 @@ See `CLAUDE.md` for the complete set of 24 rules.
 
 ```
 ai-debate/
-├── CLAUDE.md                   # Chair instructions + shared rules (read by ALL agents)
-├── README.md                   # This file
-├── config/
-│   └── debate-config.json      # Runtime configuration (populated at startup)
-├── prompts/
-│   ├── debater.md              # Universal debater agent system prompt
-│   ├── promoter.md             # DEPRECATED — superseded by debater.md
-│   ├── detractor.md            # DEPRECATED — superseded by debater.md
-│   ├── reporter.md             # Reporter agent system prompt
-│   ├── verifier.md             # Verifier agent system prompt
-│   ├── audience.md             # Audience agent system prompt
-│   └── assessor.md             # Assessor agent system prompt
+├── .claude-plugin/
+│   └── plugin.json             # Plugin manifest
+├── skills/
+│   └── debate/
+│       └── SKILL.md            # Chair orchestration + /debate entry point
+├── agents/
+│   ├── debater.md              # Universal debater agent (all debaters use this)
+│   ├── reporter.md             # Reporter agent
+│   ├── verifier.md             # Verifier agent
+│   ├── audience.md             # Audience agent
+│   └── assessor.md             # Assessor agent
 ├── shared/
-│   └── write-log.sh            # Atomic JSONL writer (used by all agents)
-└── output/                     # One subdirectory created per debate run
+│   └── write-log.sh            # Atomic JSONL writer (used by all agents via DEBATE_OUTPUT_DIR)
+├── config-template.json        # Built-in defaults (user-editable fields only)
+└── output/                     # One subdirectory created per debate run (in current working dir)
 ```
 
 ---
@@ -224,25 +253,31 @@ ai-debate/
 ## Between Runs
 
 Each debate run creates its own timestamped output directory (e.g.
-`output/20260221T140000Z-should-ai-be-used.../`) containing the full debate log and all output
-files. No manual cleanup is needed — just start a new debate and a fresh directory is created
-automatically.
+`output/20260221T140000Z-should-ai-be-used.../`) in your **current working directory** containing
+the full debate log and all output files. No manual cleanup is needed — just start a new debate
+and a fresh directory is created automatically.
 
 ---
 
 ## Troubleshooting
+
+**`/debate` not found** — ensure the plugin is installed: `claude plugin install /path/to/ai-debate`
 
 **Agents don't spawn** — ensure `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set before launching.
 
 **`flock: command not found`** — install `util-linux` (Linux) or use `brew install util-linux`
 (macOS via Homebrew). On macOS, `flock` is available in util-linux: `brew install util-linux`.
 
+**`write-log.sh` fails with `DEBATE_OUTPUT_DIR not set`** — the agent did not export the env var
+from its spawn prompt. This is a startup sequence bug — check the agent's spawn message contains
+`DEBATE_OUTPUT_DIR=...`.
+
 **`write-log.sh` fails with permission error** — ensure the script is executable:
 ```bash
 chmod +x shared/write-log.sh
 ```
 
-**Debate ends immediately** — check that `min_rounds` and `max_rounds` in config are set to
+**Debate ends immediately** — check that `min_rounds` and `max_rounds` in your config are set to
 values greater than 0.
 
 **Blog post not produced** — the Chair declared the debate void (e.g., both sides had fabricated
