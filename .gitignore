@@ -9,7 +9,3 @@
 
 # Per-machine local config overrides (should not be shared)
 .claude/ai-debate.local.json
-
-# Stale shared log files (log now lives in output/{timestamp}/)
-shared/debate-log.jsonl
-shared/debate-log.lock

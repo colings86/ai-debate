@@ -1,0 +1,20 @@
+{
+  "name": "ai-debate",
+  "owner": {
+    "name": "colings86"
+  },
+  "metadata": {
+    "description": "Structured multi-agent AI debate on any topic"
+  },
+  "plugins": [
+    {
+      "name": "ai-debate",
+      "source": "./plugins/ai-debate",
+      "description": "Structured multi-agent AI debate on any topic. Start with /debate.",
+      "version": "1.0.0",
+      "homepage": "https://github.com/colings86/ai-debate",
+      "repository": "https://github.com/colings86/ai-debate",
+      "license": "MIT"
+    }
+  ]
+}

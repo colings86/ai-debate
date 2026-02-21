@@ -40,16 +40,17 @@ the run's output directory that acts as the shared source of truth for all agent
 
 ## Installation
 
-Install the plugin from the local repo path:
+**Via marketplace (recommended):**
 
-```bash
-claude plugin install /path/to/ai-debate
+```
+/plugin marketplace add colings86/ai-debate
+/plugin install ai-debate@ai-debate
 ```
 
-Or install directly from GitHub:
+**Directly from a local clone:**
 
 ```bash
-claude plugin install https://github.com/colings86/ai-debate
+claude plugin install ./plugins/ai-debate
 ```
 
 After installation, the `/debate` skill is available in any Claude Code session.
@@ -223,7 +224,7 @@ the Chair derives them from your startup message and passes them directly to age
 - The Reporter never takes sides. The blog post is suppressed entirely if the debate is declared
   void.
 
-See `agents/debater.md` for the complete set of 24 rules.
+See `plugins/ai-debate/agents/debater.md` for the complete set of 24 rules.
 
 ---
 
@@ -232,19 +233,23 @@ See `agents/debater.md` for the complete set of 24 rules.
 ```
 ai-debate/
 ├── .claude-plugin/
-│   └── plugin.json             # Plugin manifest
-├── skills/
-│   └── debate/
-│       └── SKILL.md            # Chair orchestration + /debate entry point
-├── agents/
-│   ├── debater.md              # Universal debater agent (all debaters use this)
-│   ├── reporter.md             # Reporter agent
-│   ├── verifier.md             # Verifier agent
-│   ├── audience.md             # Audience agent
-│   └── assessor.md             # Assessor agent
-├── shared/
-│   └── write-log.sh            # Atomic JSONL writer (used by all agents via DEBATE_OUTPUT_DIR)
-├── config-template.json        # Built-in defaults (user-editable fields only)
+│   └── marketplace.json        # Marketplace catalog (lists the plugin)
+├── plugins/
+│   └── ai-debate/
+│       ├── .claude-plugin/
+│       │   └── plugin.json     # Plugin manifest
+│       ├── skills/
+│       │   └── debate/
+│       │       └── SKILL.md    # Chair orchestration + /debate entry point
+│       ├── agents/
+│       │   ├── debater.md      # Universal debater agent (all debaters use this)
+│       │   ├── reporter.md     # Reporter agent
+│       │   ├── verifier.md     # Verifier agent
+│       │   ├── audience.md     # Audience agent
+│       │   └── assessor.md     # Assessor agent
+│       ├── shared/
+│       │   └── write-log.sh    # Atomic JSONL writer (used by all agents via DEBATE_OUTPUT_DIR)
+│       └── config-template.json  # Built-in defaults (user-editable fields only)
 └── output/                     # One subdirectory created per debate run (in current working dir)
 ```
 
@@ -261,7 +266,7 @@ and a fresh directory is created automatically.
 
 ## Troubleshooting
 
-**`/debate` not found** — ensure the plugin is installed: `claude plugin install /path/to/ai-debate`
+**`/debate` not found** — ensure the plugin is installed: `claude plugin install ./plugins/ai-debate`
 
 **Agents don't spawn** — ensure `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is set before launching.
 
@@ -274,7 +279,7 @@ from its spawn prompt. This is a startup sequence bug — check the agent's spaw
 
 **`write-log.sh` fails with permission error** — ensure the script is executable:
 ```bash
-chmod +x shared/write-log.sh
+chmod +x plugins/ai-debate/shared/write-log.sh
 ```
 
 **Debate ends immediately** — check that `min_rounds` and `max_rounds` in your config are set to
