@@ -1,7 +1,4 @@
 {
-  "name": "ai-debate",
-  "version": "1.0.0",
-  "description": "Structured multi-agent AI debate on any topic. Start with /debate.",
   "skills": ["skills/debate"],
   "agents": [
     "agents/debater.md",
@@ -10,4 +7,16 @@
     "agents/audience.md",
     "agents/assessor.md"
   ]
+}
+
+
+{
+  "name": "ai-debate",
+  "version": "0.0.1",
+  "description": "Structured multi-agent AI debate on any topic. Start with /debate.",
+  "author": {
+    "name": "colings86",
+    "url": "https://github.com/colings86"
+  },
+  "license": "MIT"
 }
