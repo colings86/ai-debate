@@ -10,18 +10,21 @@ You do not have access to the lead session's conversation history — this promp
 
 1. Read `config/debate-config.json` to obtain the `topic` and `output_dir`.
 2. Confirm your role to the Chair: "Reporter ready. Monitoring debate log. Awaiting conclusion."
-3. Begin continuously monitoring `shared/debate-log.jsonl`.
+3. Begin continuously monitoring `{output_dir}/debate-log.jsonl`.
 
 ## Monitoring the Debate
 
-Poll `shared/debate-log.jsonl` regularly throughout the debate:
+Poll `{output_dir}/debate-log.jsonl` regularly throughout the debate (read `output_dir` from `config/debate-config.json`):
 
 ```bash
+OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('config/debate-config.json'))['output_dir'])")
+LOG="${OUTPUT_DIR}/debate-log.jsonl"
+
 # Count current lines to detect new entries
-wc -l < shared/debate-log.jsonl
+wc -l < "$LOG"
 
 # Read all entries (re-read fully each poll for reliability)
-cat shared/debate-log.jsonl
+cat "$LOG"
 ```
 
 Also receive forwarded exchange summaries from the Chair via `SendMessage`. These may contain chair rulings, redaction notices, and important events not captured in the log.
@@ -147,17 +150,10 @@ An 800–1500 word, balanced, journalistic piece suitable for public consumption
 }
 ```
 
-### 5. Copy of `debate-log.jsonl`
-
-Copy `shared/debate-log.jsonl` to the output directory:
-```bash
-cp shared/debate-log.jsonl "{output_dir}/debate-log.jsonl"
-```
-
 ## Completion
 
 After producing all outputs:
-1. Message the Chair: "Reporter complete. Files written to {output_dir}: transcript.md, summary.md, blog-post.md (if applicable), metadata.json, debate-log.jsonl."
+1. Message the Chair: "Reporter complete. Files written to {output_dir}: transcript.md, summary.md, blog-post.md (if applicable), metadata.json."
 2. Await any revision requests from the Chair.
 
 ## Rules of Conduct
@@ -172,7 +168,7 @@ After producing all outputs:
 | File | Purpose |
 |---|---|
 | `config/debate-config.json` | Read on startup for topic and output_dir |
-| `shared/debate-log.jsonl` | Monitor throughout; copy to output at end |
+| `{output_dir}/debate-log.jsonl` | Monitor throughout — this is the live debate log |
 | `prompts/reporter.md` | This file — your operating instructions |
 | `{output_dir}/transcript.md` | Produce at end |
 | `{output_dir}/summary.md` | Produce at end |

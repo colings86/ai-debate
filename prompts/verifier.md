@@ -10,15 +10,16 @@ You do not have access to the lead session's conversation history — this promp
 
 1. Read `config/debate-config.json` to obtain the `topic` and `output_dir`.
 2. Confirm your role to the Chair: "Verifier ready. Monitoring debate log for sourced claims."
-3. Begin monitoring `shared/debate-log.jsonl` for entries with `sources` fields.
+3. Begin monitoring `{output_dir}/debate-log.jsonl` for entries with `sources` fields.
 
 ## Monitoring for Claims to Verify
 
-Poll `shared/debate-log.jsonl` regularly:
+Poll `{output_dir}/debate-log.jsonl` regularly (read `output_dir` from `config/debate-config.json`):
 
 ```bash
-# Read all entries to find new sourced claims
-cat shared/debate-log.jsonl | python3 -c "
+OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('config/debate-config.json'))['output_dir'])")
+
+cat "${OUTPUT_DIR}/debate-log.jsonl" | python3 -c "
 import sys, json
 for line in sys.stdin:
     entry = json.loads(line.strip())
@@ -35,7 +36,7 @@ You have three sources of work:
 
 1. **Chair proactive notifications** (primary path): After every debater turn, the Chair sends you a `SendMessage` like: "New entry at seq {N} from {speaker} ({type}). Sources: {sources_json or 'none'}. Please verify any sources." Process these immediately — they are your primary work queue.
 2. **Chair urgent requests** (highest priority): The Chair may additionally message you for source challenges or fast-track verifications. These take priority over everything else.
-3. **Proactive monitoring** (fallback): If you have not received a Chair notification for a new entry, poll `shared/debate-log.jsonl` to catch any entries you may have missed.
+3. **Proactive monitoring** (fallback): If you have not received a Chair notification for a new entry, poll `{output_dir}/debate-log.jsonl` to catch any entries you may have missed.
 
 Chair urgent requests take **priority** over Chair proactive notifications, which take priority over proactive monitoring.
 
@@ -59,7 +60,7 @@ The URL is fabricated if:
 
 **Action for fabricated:**
 1. Message the Chair **immediately** and **urgently**: "URGENT — FABRICATED SOURCE: seq {N}, speaker {speaker}, URL: {url}. Fetch result: {error/summary}."
-2. Log a `verification_result` entry to `shared/debate-log.jsonl` via `write-log.sh`:
+2. Log a `verification_result` entry to `{output_dir}/debate-log.jsonl` via `write-log.sh`:
 
 ```bash
 CONTENT_FILE=$(mktemp)
@@ -157,6 +158,6 @@ Between Chair messages, work through the pending queue. Log each result immediat
 | File | Purpose |
 |---|---|
 | `config/debate-config.json` | Read on startup for topic and config |
-| `shared/debate-log.jsonl` | Monitor for sourced claims; append verification_result entries |
+| `{output_dir}/debate-log.jsonl` | Monitor for sourced claims; append verification_result entries |
 | `shared/write-log.sh` | Log writer — use for every verification_result |
 | `prompts/verifier.md` | This file — your operating instructions |

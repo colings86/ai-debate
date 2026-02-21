@@ -22,8 +22,8 @@ The Chair is the lead Claude Code session. It spawns the other six agents as tea
 coordinates a structured debate through opening statements, multiple rebuttal rounds, and closing
 statements before declaring a winner.
 
-All debate entries are written to `shared/debate-log.jsonl` — an append-only log that acts as the
-shared source of truth for all agents.
+All debate entries are written to `{output_dir}/debate-log.jsonl` — an append-only log inside
+the run's output directory that acts as the shared source of truth for all agents.
 
 ---
 
@@ -37,21 +37,7 @@ shared source of truth for all agents.
 
 ## Running a Debate
 
-### Step 1 — Choose a topic (optional)
-
-Edit `config/debate-config.json` and set the `topic` field:
-
-```json
-{
-  "topic": "Should artificial intelligence be used to make judicial sentencing decisions?",
-  ...
-}
-```
-
-If you leave `topic` empty, the Chair will use `topic_prompt` as the default topic, or ask you
-for one at startup.
-
-### Step 2 — Adjust round settings (optional)
+### Step 1 — Adjust round settings (optional)
 
 ```json
 {
@@ -63,7 +49,7 @@ for one at startup.
 
 For a quick test run, set `"max_rounds": 1`.
 
-### Step 3 — Start the debate
+### Step 2 — Start the debate
 
 From the project directory, launch Claude Code with Agent Teams enabled:
 
@@ -71,25 +57,27 @@ From the project directory, launch Claude Code with Agent Teams enabled:
 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --dangerously-skip-permissions
 ```
 
-Once the Claude Code prompt appears, **type the following to begin**:
+Once the Claude Code prompt appears, **start the debate by stating your topic**:
 
 ```
-Start the debate.
+Start the debate. The topic is: Should artificial intelligence be used to make judicial decisions?
 ```
 
-That's all you need to say. The Chair reads `CLAUDE.md` automatically when Claude Code starts,
-so it already knows its role. Sending "Start the debate." triggers the startup sequence:
+Or just say `Start the debate.` and the Chair will ask you for the topic.
 
-1. Read the config and confirm (or ask for) the topic
+The Chair reads `CLAUDE.md` automatically when Claude Code starts, so it already knows its role.
+Sending "Start the debate." triggers the startup sequence:
+
+1. Ask you for (or extract) the topic
 2. Create a timestamped output directory under `output/`
-3. Initialise `shared/debate-log.jsonl`
+3. Initialise `{output_dir}/debate-log.jsonl`
 4. Spawn the Promoter, Detractor, Reporter, Verifier, Audience, and Assessor agents
 5. Run the debate through all phases automatically
 
 > **Tip:** If you want to use a specific topic rather than the one in config, you can say:
 > `Start the debate. The topic is: [your topic here].`
 
-### Step 4 — Watch the debate
+### Step 3 — Watch the debate
 
 The Chair narrates progress in its main session. If you have `tmux` available, you can split each
 agent into its own pane for full visibility:
@@ -100,10 +88,10 @@ export CLAUDE_CODE_SPAWN_BACKEND=tmux
 CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 claude --dangerously-skip-permissions
 ```
 
-You can also tail the shared log in another terminal:
+You can also tail the debate log in another terminal (substitute your run's output directory):
 
 ```bash
-tail -f shared/debate-log.jsonl | python3 -c "
+tail -f output/<timestamp>-<slug>/debate-log.jsonl | python3 -c "
 import sys, json
 for line in sys.stdin:
     e = json.loads(line)
@@ -111,7 +99,7 @@ for line in sys.stdin:
 "
 ```
 
-### Step 5 — Read the output
+### Step 4 — Read the output
 
 When the debate concludes, the Reporter writes all output files to a timestamped directory under
 `output/`. For example:
@@ -134,8 +122,6 @@ output/20260221T140000Z-should-ai-be-used-in-judicial-sent/
 
 | Field | Default | Description |
 |---|---|---|
-| `topic` | `""` | The debate proposition. Leave empty to use `topic_prompt`. |
-| `topic_prompt` | _(example)_ | Fallback topic if `topic` is empty. |
 | `min_rounds` | `3` | Minimum rebuttal rounds before the Chair may end the debate. |
 | `max_rounds` | `8` | Hard cap on rebuttal rounds. |
 | `time_budget_minutes` | `30` | Soft time limit. Chair may conclude early if exceeded. |
@@ -189,15 +175,12 @@ ai-debate/
 
 ---
 
-## Resetting Between Runs
+## Between Runs
 
-The debate log accumulates across runs unless cleared. Before starting a fresh debate:
-
-```bash
-> shared/debate-log.jsonl
-```
-
-The Chair also does this automatically during its startup sequence.
+Each debate run creates its own timestamped output directory (e.g.
+`output/20260221T140000Z-should-ai-be-used.../`) containing the full debate log and all output
+files. No manual cleanup is needed — just start a new debate and a fresh directory is created
+automatically.
 
 ---
 

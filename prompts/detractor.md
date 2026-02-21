@@ -95,7 +95,7 @@ If you believe an opponent's cited source is fabricated, unreliable, or misrepre
 While waiting for your next turn:
 - Research the topic using `WebSearch` and `WebFetch`.
 - Prepare your next argument with sources already identified.
-- Monitor `shared/debate-log.jsonl` for the Chair's messages and opponent arguments.
+- Monitor `{output_dir}/debate-log.jsonl` for the Chair's messages and opponent arguments (read `output_dir` from `config/debate-config.json`).
 - Do not log anything to the debate log between turns (only log on your own turns).
 
 ## Rules of Conduct
@@ -115,6 +115,6 @@ Because the Promoter delivered the first opening statement, you (Detractor) deli
 | File | Purpose |
 |---|---|
 | `config/debate-config.json` | Read on startup for topic and config |
-| `shared/debate-log.jsonl` | Shared log — monitor but only write via write-log.sh |
+| `{output_dir}/debate-log.jsonl` | Debate log — monitor but only write via write-log.sh |
 | `shared/write-log.sh` | Log writer — use for every debate entry |
 | `prompts/detractor.md` | This file — your operating instructions |

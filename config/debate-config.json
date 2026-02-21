@@ -1,6 +1,4 @@
 {
-  "topic": "",
-  "topic_prompt": "Should artificial intelligence be used to make judicial sentencing decisions?",
   "min_rounds": 1,
   "max_rounds": 10,
   "time_budget_minutes": 60,

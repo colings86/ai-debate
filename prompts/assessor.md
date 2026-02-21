@@ -33,7 +33,7 @@ Read these files in parallel:
 - `{output_dir}/transcript.md`
 - `{output_dir}/summary.md`
 - `{output_dir}/blog-post.md` (may not exist if debate was void)
-- `shared/debate-log.jsonl` (the raw debate record)
+- `{output_dir}/debate-log.jsonl` (the raw debate record)
 - All agent prompts: `prompts/promoter.md`, `prompts/detractor.md`, `prompts/reporter.md`, `prompts/verifier.md`, `prompts/audience.md`, `prompts/assessor.md`
 
 ### Step 2 — Evaluate each role
@@ -127,7 +127,7 @@ Once the report is written, message the Chair: "Assessment complete. Report writ
 | File | Purpose |
 |---|---|
 | `config/debate-config.json` | Read on startup for topic and config |
-| `shared/debate-log.jsonl` | Raw debate record for evaluation |
+| `{output_dir}/debate-log.jsonl` | Raw debate record for evaluation |
 | `prompts/*.md` | Role specifications to evaluate against |
 | `{output_dir}/transcript.md` | Reporter output — evaluate completeness |
 | `{output_dir}/summary.md` | Reporter output — evaluate accuracy |

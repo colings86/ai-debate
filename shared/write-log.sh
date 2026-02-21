@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# write-log.sh — Atomically appends a JSONL entry to shared/debate-log.jsonl
+# write-log.sh — Atomically appends a JSONL entry to {output_dir}/debate-log.jsonl
 #
 # Usage:
 #   ./shared/write-log.sh <phase> <speaker> <type> <content_file> [sources_json] [rebuttal_to_seq] [target_seq]
 #
 # Arguments:
 #   phase            — debate phase (e.g. "opening", "rebuttal", "closing", "system")
-#   speaker          — agent name (chair, promoter, detractor, reporter, verifier)
+#   speaker          — agent name (chair, promoter, detractor, reporter, verifier, audience, assessor)
 #   type             — entry type (see CLAUDE.md for full list)
 #   content_file     — path to a file containing the entry's content (avoids quoting issues)
 #   sources_json     — optional JSON array of source objects, e.g. '[{"url":"https://...","title":"..."}]'
@@ -20,8 +20,18 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LOG_FILE="${SCRIPT_DIR}/debate-log.jsonl"
-LOCK_FILE="${SCRIPT_DIR}/debate-log.lock"
+CONFIG_FILE="${SCRIPT_DIR}/../config/debate-config.json"
+
+# Determine log file path from output_dir in config
+OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('${CONFIG_FILE}'))['output_dir'])" 2>/dev/null || true)
+
+if [[ -z "$OUTPUT_DIR" ]]; then
+  echo "Error: output_dir not set in config/debate-config.json. Ensure the Chair has completed Step C." >&2
+  exit 1
+fi
+
+LOG_FILE="${OUTPUT_DIR}/debate-log.jsonl"
+LOCK_FILE="${OUTPUT_DIR}/debate-log.lock"
 
 # --- Validate arguments ---
 if [[ $# -lt 4 ]]; then

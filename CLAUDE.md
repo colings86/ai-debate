@@ -28,10 +28,10 @@ Execute this sequence **exactly once** at the start of each session:
 cat config/debate-config.json
 ```
 
-**Step B — Set topic**
-- If `topic` is non-empty in config: use that as the debate topic.
-- If `topic` is empty: use `topic_prompt` from config as the topic, OR ask the user: "What should the debate topic be?"
-- Write the final topic back to `config/debate-config.json`.
+**Step B — Get topic from user**
+- If the user provided a topic in their "Start the debate" message, use it directly.
+- Otherwise, ask the user: "What should the debate topic be?" and wait for their response.
+- Write the final topic to `config/debate-config.json` so agents can access it if needed.
 
 **Step C — Create timestamped output directory**
 ```bash
@@ -45,10 +45,8 @@ Update `output_dir` in `config/debate-config.json` with this path.
 
 **Step D — Initialise debate log**
 ```bash
-# Clear and initialise the shared log
-> shared/debate-log.jsonl
-
-# Write setup declaration entry
+# Write the setup declaration entry to {output_dir}/debate-log.jsonl
+# (write-log.sh reads output_dir from config — Step C must complete first)
 CONTENT_FILE=$(mktemp)
 cat > "$CONTENT_FILE" << 'CONTENT_EOF'
 Debate session initialised. Chair is ready.
@@ -79,21 +77,21 @@ Task({
 Task({
   team_name: "debate",
   name: "reporter",
-  prompt: "Read prompts/reporter.md for your full instructions. The debate topic is: {TOPIC}. Monitor shared/debate-log.jsonl throughout the debate.",
+  prompt: "Read prompts/reporter.md for your full instructions. The debate topic is: {TOPIC}. Monitor {output_dir}/debate-log.jsonl throughout the debate.",
   run_in_background: true
 })
 
 Task({
   team_name: "debate",
   name: "verifier",
-  prompt: "Read prompts/verifier.md for your full instructions. The debate topic is: {TOPIC}. Begin monitoring shared/debate-log.jsonl for sourced claims to verify.",
+  prompt: "Read prompts/verifier.md for your full instructions. The debate topic is: {TOPIC}. Begin monitoring {output_dir}/debate-log.jsonl for sourced claims to verify.",
   run_in_background: true
 })
 
 Task({
   team_name: "debate",
   name: "audience",
-  prompt: "Read prompts/audience.md for your full instructions. The debate topic is: {TOPIC}. Monitor shared/debate-log.jsonl to follow the debate as it unfolds.",
+  prompt: "Read prompts/audience.md for your full instructions. The debate topic is: {TOPIC}. Monitor {output_dir}/debate-log.jsonl to follow the debate as it unfolds.",
   run_in_background: true
 })
 
@@ -186,7 +184,7 @@ rm "$CONTENT_FILE"
 
 #### Phase 4 — Conclusion
 
-1. Review the full debate log: `cat shared/debate-log.jsonl`
+1. Review the full debate log: `cat {output_dir}/debate-log.jsonl`
 2. Evaluate the debate on these criteria:
    - Quality and quantity of sourced arguments
    - Effectiveness of rebuttals
@@ -306,7 +304,7 @@ These rules apply to **all agents**. The Chair enforces them; agents must follow
 
 ### 3.1 JSONL Schema
 
-Every entry in `shared/debate-log.jsonl` is a single JSON object on one line:
+Every entry in `{output_dir}/debate-log.jsonl` is a single JSON object on one line:
 
 ```json
 {
@@ -413,7 +411,7 @@ SEQ=$(./shared/write-log.sh "rebuttal" "<speaker>" "rebuttal" "$CONTENT_FILE" "$
 |---|---|
 | `CLAUDE.md` | This file — read by all agents |
 | `config/debate-config.json` | Runtime configuration (topic, rounds, models, output_dir) |
-| `shared/debate-log.jsonl` | Append-only debate log — source of truth |
+| `{output_dir}/debate-log.jsonl` | Append-only debate log — source of truth |
 | `shared/write-log.sh` | Atomic log writer — use for all log entries |
 | `prompts/promoter.md` | Promoter role instructions |
 | `prompts/detractor.md` | Detractor role instructions |

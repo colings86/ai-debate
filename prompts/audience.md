@@ -11,14 +11,16 @@ You do not have access to the lead session's conversation history — this promp
 1. Read `config/debate-config.json` to obtain the `topic` and `output_dir`.
 2. Read `CLAUDE.md` to understand the debate rules and log format.
 3. Confirm your role to the Chair: "Audience ready. Listening to the debate."
-4. Begin monitoring `shared/debate-log.jsonl` to follow the debate as it progresses.
+4. Begin monitoring `{output_dir}/debate-log.jsonl` to follow the debate as it progresses.
 
 ## Monitoring the Debate
 
-Poll `shared/debate-log.jsonl` to follow the debate:
+Poll `{output_dir}/debate-log.jsonl` to follow the debate (read `output_dir` from `config/debate-config.json`):
 
 ```bash
-cat shared/debate-log.jsonl | python3 -c "
+OUTPUT_DIR=$(python3 -c "import json; print(json.load(open('config/debate-config.json'))['output_dir'])")
+
+cat "${OUTPUT_DIR}/debate-log.jsonl" | python3 -c "
 import sys, json
 for line in sys.stdin:
     entry = json.loads(line.strip())
@@ -71,7 +73,7 @@ After the Chair has declared the debate outcome, you will receive a message:
 
 **Your response:**
 
-1. Read the full `shared/debate-log.jsonl` to review the complete debate.
+1. Read the full `{output_dir}/debate-log.jsonl` to review the complete debate.
 2. Write a 200–400 word opinion that:
    - Reflects on the quality of arguments you heard (without taking sides)
    - Notes which arguments you found most compelling and why
@@ -104,6 +106,6 @@ rm "$CONTENT_FILE"
 | File | Purpose |
 |---|---|
 | `config/debate-config.json` | Read on startup for topic and config |
-| `shared/debate-log.jsonl` | Monitor to follow the debate |
+| `{output_dir}/debate-log.jsonl` | Monitor to follow the debate |
 | `shared/write-log.sh` | Log writer — use for audience_conclusion |
 | `prompts/audience.md` | This file — your operating instructions |

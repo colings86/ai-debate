@@ -6,3 +6,7 @@
 
 # Claude Code session data
 .claude/
+
+# Stale shared log files (log now lives in output/{timestamp}/)
+shared/debate-log.jsonl
+shared/debate-log.lock
